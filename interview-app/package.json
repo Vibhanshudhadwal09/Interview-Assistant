@@ -1,0 +1,35 @@
+{
+  "name": "angular-electron-app",
+  "version": "1.0.0",
+  "description": "An Angular application packaged with Electron.",
+  "main": "dist/main/electron-main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build && tsc --project tsconfig.electron.json",
+    "electron": "electron .",
+    "electron:serve": "npm run build && npm run electron"
+  },
+  "dependencies": {
+    "@angular/common": "^20.0.0",
+    "@angular/compiler": "^20.0.0",
+    "@angular/core": "^20.0.0",
+    "@angular/platform-browser": "^20.0.0",
+    "@angular/platform-browser-dynamic": "^20.0.0",
+    "electron": "^13.0.0",
+    "zone.js": "^0.15.1"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^20.0.0",
+    "@angular/cli": "^20.0.0",
+    "@angular/compiler-cli": "^20.0.0",
+    "@types/node": "^24.5.2",
+    "typescript": "~5.8.0"
+  },
+  "keywords": [
+    "angular",
+    "electron"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
