@@ -1,12 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angular Electron App</title>
-</head>
-<body>
-    <h1>Welcome to Angular Electron App!</h1>
-    <p>This is a simple desktop application built with Angular and Electron.</p>
-</body>
-</html>
+<div class="chat-container">
+  <div class="chat-header">
+    <h2>Interview Assistant Chat</h2>
+  </div>
+  
+  <div class="chat-messages" #chatMessages>
+    <div *ngFor="let message of messages" 
+         class="message" 
+         [ngClass]="{'user-message': message.isUser, 'bot-message': !message.isUser}">
+      <div class="message-content">
+        <div class="message-text">{{ message.text }}</div>
+        <div class="message-time">{{ message.timestamp | date:'short' }}</div>
+      </div>
+    </div>
+    
+    <!-- Show typing indicator when user is typing -->
+    <div *ngIf="isTyping" class="typing-indicator">
+      <div class="typing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <span class="typing-text">Typing...</span>
+    </div>
+  </div>
+  
+  <div class="chat-input-container">
+    <div class="input-wrapper">
+      <textarea 
+        [(ngModel)]="currentMessage" 
+        (keydown)="onKeyDown($event)"
+        (input)="onInput()"
+        placeholder="Type your message here..."
+        class="chat-input"
+        #messageInput>
+      </textarea>
+      <button 
+        (click)="sendMessage()" 
+        [disabled]="!currentMessage.trim()"
+        class="send-button">
+        <span class="send-icon">➤</span>
+      </button>
+    </div>
+  </div>
+</div>

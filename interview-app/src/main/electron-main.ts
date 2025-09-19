@@ -5,25 +5,57 @@ import * as path from 'path';
 
 function createWindow() {
     let mainWindow: BrowserWindow | null = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1000,
+        height: 700,
+        minWidth: 800,
+        minHeight: 600,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'), // Adjust if you have a preload script
+            // Remove preload script reference since we don't have one
             contextIsolation: true,
             enableRemoteModule: false,
             nodeIntegration: false,
         },
+        icon: path.join(__dirname, '../assets/icon.png'), // Add app icon if available
+        titleBarStyle: 'default',
+        show: false, // Don't show until ready
     });
 
     // Load the built Angular app
-    mainWindow.loadFile(path.join(__dirname, '../angular-electron-app/index.html'));
+    const indexPath = path.join(__dirname, '../angular-electron-app/browser/index.html');
+    console.log('Loading app from:', indexPath);
+    mainWindow.loadFile(indexPath);
+
+    // Handle loading errors
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        console.error('Failed to load app:', errorCode, errorDescription);
+    });
+
+    // Show window when ready to prevent visual flash
+    mainWindow.once('ready-to-show', () => {
+        console.log('App ready to show');
+        mainWindow?.show();
+        
+        // Focus the window
+        if (mainWindow) {
+            mainWindow.focus();
+        }
+    });
+
+    // Open DevTools in development
+    if (process.env.NODE_ENV === 'development') {
+        mainWindow.webContents.openDevTools();
+    }
 
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
+
+    return mainWindow;
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+    createWindow();
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
