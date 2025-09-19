@@ -1,38 +1,75 @@
-# Angular Electron App
+# Angular Electron Interview App
 
-This project is a desktop application built using Angular and Electron. It serves as a template for creating cross-platform desktop applications with web technologies.
+A modern desktop application built with Angular and Electron for interview preparation and management.
+
+## Features
+
+- **Angular Frontend**: Modern, responsive UI built with Angular
+- **Electron Desktop**: Cross-platform desktop application
+- **TypeScript Support**: Full TypeScript integration for both frontend and main process
+- **Build System**: Integrated build system for both Angular and Electron
+
+## Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-username/angular-electron-interview-app.git
+cd angular-electron-interview-app
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+## Development
+
+### Run Angular development server:
+```bash
+npm start
+```
+
+### Build and run Electron app:
+```bash
+npm run electron:serve
+```
+
+### Build for production:
+```bash
+npm run build
+```
 
 ## Project Structure
 
-- `src/app/app.component.ts`: Defines the root component of the Angular application.
-- `src/app/app.module.ts`: Main module of the Angular application, imports necessary modules and declares components.
-- `src/app/app.component.html`: HTML template for the AppComponent.
-- `src/main/electron-main.ts`: Entry point for the Electron application, manages the application window and lifecycle.
-- `angular.json`: Configuration file for Angular CLI.
-- `package.json`: Configuration file for npm, lists dependencies and scripts.
-- `tsconfig.json`: TypeScript configuration file.
-
-## Setup Instructions
-
-1. Install Node.js if you haven't already.
-2. Open a terminal and navigate to the project directory.
-3. Run `npm install` to install the necessary dependencies.
-4. Run `ng build` to build the Angular application.
-5. Run `npm run electron` to start the Electron application.
-
-## Scripts
-
-Make sure to add the following scripts in your `package.json` for building and running Electron:
-
-```json
-"scripts": {
-  "ng": "ng",
-  "start": "ng serve",
-  "build": "ng build",
-  "electron": "electron ."
-}
+```
+src/
+├── app/                    # Angular application
+│   ├── app.component.*    # Main component
+│   └── app.module.ts      # App module
+├── main/                  # Electron main process
+│   └── electron-main.ts   # Main Electron file
+├── assets/                # Static assets
+└── index.html            # Angular entry point
 ```
 
-## Usage
+## Build Configuration
 
-After running the application, you should see the main window of your Angular Electron app. You can modify the components and styles as needed to customize your application.
+- **Angular**: Configured via `angular.json`
+- **Electron**: TypeScript configuration in `tsconfig.electron.json`
+- **Build Process**: Integrated build that compiles both Angular and Electron
+
+## Development Notes
+
+This project includes fixes for common Angular-Electron integration issues:
+- Proper TypeScript configuration for Electron main process
+- Zone.js import path resolution
+- Component standalone configuration
+
+## License
+
+MIT License
