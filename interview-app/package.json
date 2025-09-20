@@ -8,15 +8,19 @@
     "start": "ng serve",
     "build": "ng build && tsc --project tsconfig.electron.json",
     "electron": "electron .",
-    "electron:serve": "npm run build && npm run electron"
+    "electron:serve": "npm run build && npm run electron",
+    "electron:dev": "ng build --watch & npm run electron"
   },
   "dependencies": {
     "@angular/common": "^20.0.0",
     "@angular/compiler": "^20.0.0",
     "@angular/core": "^20.0.0",
+    "@angular/forms": "^20.3.1",
     "@angular/platform-browser": "^20.0.0",
     "@angular/platform-browser-dynamic": "^20.0.0",
     "electron": "^13.0.0",
+    "electron-localshortcut": "^3.2.1",
+    "globalkey": "^1.0.7",
     "zone.js": "^0.15.1"
   },
   "devDependencies": {

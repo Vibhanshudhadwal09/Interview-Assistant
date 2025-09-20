@@ -1,45 +1,200 @@
-<div class="chat-container">
-  <div class="chat-header">
-    <h2>Interview Assistant Chat</h2>
+<div class="app-container">
+  <!-- Window Controls -->
+  <div class="window-controls">
+    <!-- Draggable Area -->
+    <div class="drag-area"></div>
+    
+    <div class="control-buttons">
+      <button class="control-btn minimize" (click)="minimizeWindow()" title="Minimize">−</button>
+      <button class="control-btn hide" (click)="hideWindow()" title="Hide (Ctrl+Alt+H)">⊟</button>
+      <button class="control-btn close" (click)="closeWindow()" title="Close">×</button>
+    </div>
+    
+    <!-- View Switcher -->
+    <div class="view-switcher">
+      <button 
+        class="view-btn" 
+        [class.active]="currentView === 'chat'"
+        (click)="switchView('chat')">Chat</button>
+      <button 
+        class="view-btn" 
+        [class.active]="currentView === 'screenshot'"
+        (click)="switchView('screenshot')">Screenshot</button>
+      <button 
+        class="view-btn" 
+        [class.active]="currentView === 'settings'"
+        (click)="switchView('settings')">Settings</button>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button 
+        class="quick-btn" 
+        (click)="resetPosition()"
+        title="Reset Position (Ctrl+Shift+R)">⌂</button>
+      <span class="screen-sharing-indicator" 
+            [class.active]="screenSharingActive"
+            title="Screen sharing status">📺</span>
+    </div>
   </div>
-  
-  <div class="chat-messages" #chatMessages>
-    <div *ngFor="let message of messages" 
-         class="message" 
-         [ngClass]="{'user-message': message.isUser, 'bot-message': !message.isUser}">
-      <div class="message-content">
-        <div class="message-text">{{ message.text }}</div>
-        <div class="message-time">{{ message.timestamp | date:'short' }}</div>
+
+  <!-- Chat View -->
+  <div *ngIf="currentView === 'chat'" class="chat-container">
+    <div class="chat-header">
+      <h2>AI Meeting Assistant</h2>
+    </div>
+    
+    <div class="chat-messages" #chatMessages>
+      <div *ngFor="let message of messages" 
+            class="message" 
+            [ngClass]="{'user-message': message.isUser, 'bot-message': !message.isUser}">
+        <div class="message-content">
+          <div class="message-text">{{ message.text }}</div>
+          <div class="message-time">{{ message.timestamp | date:'short' }}</div>
+        </div>
+      </div>
+      
+      <!-- Show typing indicator when user is typing -->
+      <div *ngIf="isTyping" class="typing-indicator">
+        <div class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <span class="typing-text">Typing...</span>
       </div>
     </div>
     
-    <!-- Show typing indicator when user is typing -->
-    <div *ngIf="isTyping" class="typing-indicator">
-      <div class="typing-dots">
-        <span></span>
-        <span></span>
-        <span></span>
+    <div class="chat-input-container">
+      <div class="input-wrapper">
+        <textarea 
+          [(ngModel)]="currentMessage" 
+          (keydown)="onKeyDown($event)"
+          (input)="onInput()"
+          placeholder="Type your message here..."
+          class="chat-input"
+          #messageInput>
+        </textarea>
+        <button 
+          (click)="sendMessage()" 
+          [disabled]="!currentMessage.trim()"
+          class="send-button">
+          <span class="send-icon">➤</span>
+        </button>
       </div>
-      <span class="typing-text">Typing...</span>
     </div>
   </div>
-  
-  <div class="chat-input-container">
-    <div class="input-wrapper">
-      <textarea 
-        [(ngModel)]="currentMessage" 
-        (keydown)="onKeyDown($event)"
-        (input)="onInput()"
-        placeholder="Type your message here..."
-        class="chat-input"
-        #messageInput>
-      </textarea>
-      <button 
-        (click)="sendMessage()" 
-        [disabled]="!currentMessage.trim()"
-        class="send-button">
-        <span class="send-icon">➤</span>
-      </button>
+
+  <!-- Screenshot View -->
+  <div *ngIf="currentView === 'screenshot'" class="screenshot-container">
+    <div class="screenshot-header">
+      <h2>Screen Capture</h2>
+      <button class="capture-btn" (click)="takeScreenshot()">📸 Capture Screen</button>
+    </div>
+    
+    <div class="screenshots-grid">
+      <div *ngIf="screenshots.length === 0" class="no-screenshots">
+        <p>No screenshots yet. Click "Capture Screen" to take your first screenshot.</p>
+      </div>
+      
+      <div *ngFor="let screenshot of screenshots; let i = index" class="screenshot-item">
+        <img [src]="screenshot" alt="Screenshot" class="screenshot-image">
+        <div class="screenshot-actions">
+          <button class="action-btn download" (click)="downloadScreenshot(screenshot, i)" title="Download">⬇️</button>
+          <button class="action-btn delete" (click)="deleteScreenshot(i)" title="Delete">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings View -->
+  <div *ngIf="currentView === 'settings'" class="settings-container">
+    <div class="settings-header">
+      <h2>Settings & Hotkeys</h2>
+    </div>
+    
+    <div class="settings-content">
+      <!-- Window Settings -->
+      <div class="settings-section">
+        <h3>Window Settings</h3>
+        
+        <div class="setting-item">
+          <label>Opacity:</label>
+          <div class="opacity-control">
+            <input 
+              type="range" 
+              min="0.3" 
+              max="1" 
+              step="0.1" 
+              [value]="opacity"
+              (input)="updateOpacity($event)">
+            <span>{{(opacity * 100) | number:'1.0-0'}}%</span>
+          </div>
+        </div>
+        
+        <div class="setting-item">
+          <label>Always on Top:</label>
+          <button 
+            class="toggle-btn" 
+            [class.active]="alwaysOnTop"
+            (click)="toggleAlwaysOnTop()">
+            {{alwaysOnTop ? 'ON' : 'OFF'}}
+          </button>
+        </div>
+        
+        <div class="setting-item">
+          <label>Screen Sharing Status:</label>
+          <span class="status-indicator" [class.active]="screenSharingActive">
+            {{screenSharingActive ? 'ACTIVE (Hidden)' : 'INACTIVE'}}
+          </span>
+        </div>
+      </div>
+      
+      <!-- Hotkeys Section -->
+      <div class="settings-section">
+        <h3>Hotkeys</h3>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Toggle Window:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('toggleVisibility')}}</kbd>
+        </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Toggle Transparency:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('toggleTransparency')}}</kbd>
+        </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Quick Screenshot:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('quickScreenshot')}}</kbd>
+        </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Reset Position:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('resetPosition')}}</kbd>
+        </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Global Toggle:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('globalToggle')}}</kbd>
+        </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Global Hide:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('globalHide')}}</kbd>
+        </div>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="settings-section">
+        <h3>Quick Actions</h3>
+        
+        <div class="action-buttons">
+          <button class="action-btn" (click)="takeScreenshot()">📸 Take Screenshot</button>
+          <button class="action-btn" (click)="resetPosition()">⌂ Reset Position</button>
+          <button class="action-btn" (click)="hideWindow()">🙈 Hide Window</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
