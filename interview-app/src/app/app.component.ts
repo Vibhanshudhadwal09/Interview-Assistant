@@ -32,6 +32,7 @@ export class AppComponent implements AfterViewChecked {
   isMinimized: boolean = false;
   hotkeys: any = {};
   screenSharingActive: boolean = false;
+  contentProtectionEnabled: boolean = false;
 
   constructor() {
     // Add a welcome message
@@ -136,6 +137,8 @@ export class AppComponent implements AfterViewChecked {
       if (window.require) {
         const { ipcRenderer } = window.require('electron');
         this.hotkeys = await ipcRenderer.invoke('get-hotkeys');
+        // Add the new screen sharing hotkey
+        this.hotkeys.screenSharingToggle = 'Ctrl+Shift+M';
       }
     } catch (error) {
       console.error('Failed to load hotkeys:', error);
@@ -151,6 +154,12 @@ export class AppComponent implements AfterViewChecked {
         ipcRenderer.on('trigger-screenshot', () => {
           this.takeScreenshot();
         });
+        
+        // Listen for screen sharing status updates
+        ipcRenderer.on('screen-sharing-status', (event: any, active: boolean) => {
+          this.screenSharingActive = active;
+          console.log('Screen sharing status updated:', active);
+        });
       }
     } catch (error) {
       console.error('Failed to setup listeners:', error);
@@ -162,6 +171,7 @@ export class AppComponent implements AfterViewChecked {
       if (window.require) {
         const { ipcRenderer } = window.require('electron');
         this.screenSharingActive = await ipcRenderer.invoke('get-screen-sharing-status');
+        this.contentProtectionEnabled = await ipcRenderer.invoke('get-content-protection-status');
       }
     } catch (error) {
       console.error('Failed to check screen sharing status:', error);
@@ -269,5 +279,41 @@ export class AppComponent implements AfterViewChecked {
   // Get hotkey display text
   getHotkeyText(action: string): string {
     return this.hotkeys[action] || 'Not set';
+  }
+  
+  // Screen sharing mode controls
+  async toggleScreenSharingMode() {
+    try {
+      if (window.require) {
+        const { ipcRenderer } = window.require('electron');
+        this.contentProtectionEnabled = await ipcRenderer.invoke('toggle-content-protection');
+        this.screenSharingActive = this.contentProtectionEnabled;
+      }
+    } catch (error) {
+      console.error('Failed to toggle screen sharing mode:', error);
+    }
+  }
+  
+  async setScreenSharingMode(active: boolean) {
+    try {
+      if (window.require) {
+        const { ipcRenderer } = window.require('electron');
+        this.screenSharingActive = await ipcRenderer.invoke('set-screen-sharing-mode', active);
+        this.contentProtectionEnabled = active;
+      }
+    } catch (error) {
+      console.error('Failed to set screen sharing mode:', error);
+    }
+  }
+  
+  async toggleContentProtection() {
+    try {
+      if (window.require) {
+        const { ipcRenderer } = window.require('electron');
+        this.contentProtectionEnabled = await ipcRenderer.invoke('toggle-content-protection');
+      }
+    } catch (error) {
+      console.error('Failed to toggle content protection:', error);
+    }
   }
 }

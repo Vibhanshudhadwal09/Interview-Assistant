@@ -7,6 +7,7 @@ let mainWindow: BrowserWindow | null = null;
 let isHidden = false;
 let originalOpacity = 0.9;
 let screenSharingActive = false;
+let contentProtectionEnabled = false;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -93,6 +94,11 @@ function registerLocalShortcuts(window: BrowserWindow) {
     localShortcut.register(window, 'Ctrl+Shift+R', () => {
         resetWindowPosition();
     });
+    
+    // Manual screen sharing mode toggle (Ctrl+Shift+M)
+    localShortcut.register(window, 'Ctrl+Shift+M', () => {
+        toggleScreenSharingMode();
+    });
 }
 
 // Register global shortcuts
@@ -169,39 +175,120 @@ function resetWindowPosition() {
     });
 }
 
+// Manual screen sharing mode toggle
+function toggleScreenSharingMode() {
+    screenSharingActive = !screenSharingActive;
+    console.log(`Screen sharing mode manually ${screenSharingActive ? 'enabled' : 'disabled'}`);
+    
+    if (screenSharingActive) {
+        enableContentProtection();
+    } else {
+        disableContentProtection();
+    }
+    
+    // Send notification to renderer
+    if (mainWindow) {
+        mainWindow.webContents.send('screen-sharing-status', screenSharingActive);
+    }
+}
+
+// Content protection functions
+function enableContentProtection() {
+    if (!mainWindow) return;
+    
+    try {
+        // Enable content protection to exclude from screen capture
+        mainWindow.setContentProtection(true);
+        contentProtectionEnabled = true;
+        
+        // Additional Windows-specific protection
+        if (process.platform === 'win32') {
+            // Set window to exclude from capture (Windows 10+ feature)
+            const { exec } = require('child_process');
+            const windowHandle = mainWindow.getNativeWindowHandle();
+            if (windowHandle) {
+                // This is a Windows API call to exclude window from capture
+                exec(`powershell -Command "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\"user32.dll\")] public static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint dwAffinity); }'; [Win32]::SetWindowDisplayAffinity(${windowHandle.readBigUInt64LE()}, 0x11)"`, (error: any) => {
+                    if (error) {
+                        console.log('Windows display affinity setting failed (this is normal on older Windows versions)');
+                    } else {
+                        console.log('Windows display affinity protection enabled');
+                    }
+                });
+            }
+        }
+        
+        console.log('Content protection enabled - window excluded from screen capture');
+    } catch (error) {
+        console.error('Failed to enable content protection:', error);
+    }
+}
+
+function disableContentProtection() {
+    if (!mainWindow) return;
+    
+    try {
+        // Disable content protection
+        mainWindow.setContentProtection(false);
+        contentProtectionEnabled = false;
+        
+        // Remove Windows-specific protection
+        if (process.platform === 'win32') {
+            const { exec } = require('child_process');
+            const windowHandle = mainWindow.getNativeWindowHandle();
+            if (windowHandle) {
+                exec(`powershell -Command "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\"user32.dll\")] public static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint dwAffinity); }'; [Win32]::SetWindowDisplayAffinity(${windowHandle.readBigUInt64LE()}, 0x00)"`, (error: any) => {
+                    if (error) {
+                        console.log('Windows display affinity removal failed');
+                    } else {
+                        console.log('Windows display affinity protection disabled');
+                    }
+                });
+            }
+        }
+        
+        console.log('Content protection disabled - window included in screen capture');
+    } catch (error) {
+        console.error('Failed to disable content protection:', error);
+    }
+}
+
 // Screen sharing detection
 function setupScreenSharingDetection() {
-    // Check every 2 seconds for screen sharing
+    // Check every 1 second for screen sharing activity
     setInterval(async () => {
         await checkScreenSharing();
-    }, 2000);
+    }, 1000);
 }
 
 async function checkScreenSharing() {
     try {
-        const sources = await desktopCapturer.getSources({
-            types: ['screen'],
-            thumbnailSize: { width: 150, height: 150 }
-        });
-        
-        // Simple heuristic: if we can't get screen sources or there are unusual patterns,
-        // assume screen sharing might be active
+        // Method 1: Check if any process is accessing screen capture APIs
         const wasScreenSharing = screenSharingActive;
         
-        // Check if any apps that commonly indicate screen sharing are running
-        // This is a basic check - in a real app you'd want more sophisticated detection
-        screenSharingActive = await detectScreenSharingApps();
+        // Check for screen capture activity using multiple methods
+        const isCapturing = await detectScreenCapture();
         
-        if (screenSharingActive && !wasScreenSharing) {
-            // Screen sharing started - hide window
-            if (mainWindow && mainWindow.isVisible()) {
-                hideWindow();
-                console.log('Screen sharing detected - hiding window');
+        if (isCapturing && !wasScreenSharing) {
+            // Screen sharing started - enable content protection
+            screenSharingActive = true;
+            if (mainWindow) {
+                enableContentProtection();
+                console.log('Screen sharing detected - enabling content protection');
+                
+                // Send notification to renderer
+                mainWindow.webContents.send('screen-sharing-status', true);
             }
-        } else if (!screenSharingActive && wasScreenSharing) {
-            // Screen sharing stopped - restore window if it was visible before
-            console.log('Screen sharing stopped');
-            // Don't auto-show, user can manually show with hotkey
+        } else if (!isCapturing && wasScreenSharing) {
+            // Screen sharing stopped
+            screenSharingActive = false;
+            console.log('Screen sharing stopped - disabling content protection');
+            
+            if (mainWindow) {
+                disableContentProtection();
+                // Send notification to renderer
+                mainWindow.webContents.send('screen-sharing-status', false);
+            }
         }
         
     } catch (error) {
@@ -209,29 +296,61 @@ async function checkScreenSharing() {
     }
 }
 
-// Detect screen sharing applications (basic implementation)
-async function detectScreenSharingApps(): Promise<boolean> {
+// Enhanced screen capture detection
+async function detectScreenCapture(): Promise<boolean> {
     try {
-        // This is a simplified detection - in a real app you'd want to:
-        // 1. Check running processes for screen sharing apps
-        // 2. Monitor system APIs for screen capture
-        // 3. Check for screen recording indicators
-        
-        // For now, we'll check if there are any capturing processes
         const { exec } = require('child_process');
         
         return new Promise((resolve) => {
-            // Check for common screen sharing processes on Windows
-            exec('tasklist /FI "IMAGENAME eq Teams.exe" /FI "STATUS eq RUNNING" | find /I "Teams.exe"', (error: any, stdout: any) => {
-                if (stdout && stdout.includes('Teams.exe')) {
-                    // Additional check would be needed to see if Teams is actually sharing
-                    resolve(false); // For now, just return false
-                } else {
-                    resolve(false);
+            // Check multiple indicators of screen sharing
+            let indicators = 0;
+            let checksCompleted = 0;
+            const totalChecks = 3;
+            
+            // Check 1: Look for common meeting apps with screen sharing indicators
+            exec('tasklist /FI "STATUS eq RUNNING" /FO CSV | findstr /I "chrome.exe firefox.exe msedge.exe Teams.exe Zoom.exe"', (error: any, stdout: any) => {
+                if (stdout && stdout.length > 100) { // If many browser/meeting processes
+                    indicators++;
+                }
+                checksCompleted++;
+                if (checksCompleted === totalChecks) {
+                    resolve(indicators >= 2); // Require at least 2 indicators
                 }
             });
+            
+            // Check 2: Monitor for high CPU usage from browsers/meeting apps
+            exec('wmic process where "name like \'%chrome%\' or name like \'%firefox%\' or name like \'%edge%\' or name like \'%teams%\' or name like \'%zoom%\'" get Name,ProcessId,PageFileUsage', (error: any, stdout: any) => {
+                if (stdout && stdout.includes('chrome') && stdout.length > 200) {
+                    indicators++;
+                }
+                checksCompleted++;
+                if (checksCompleted === totalChecks) {
+                    resolve(indicators >= 2);
+                }
+            });
+            
+            // Check 3: Check for Google Meet specific indicators
+            exec('netstat -an | findstr :443', (error: any, stdout: any) => {
+                // Multiple HTTPS connections might indicate video conferencing
+                if (stdout && (stdout.match(/443/g) || []).length > 5) {
+                    indicators++;
+                }
+                checksCompleted++;
+                if (checksCompleted === totalChecks) {
+                    resolve(indicators >= 2);
+                }
+            });
+            
+            // Timeout fallback
+            setTimeout(() => {
+                if (checksCompleted < totalChecks) {
+                    resolve(false);
+                }
+            }, 2000);
         });
+        
     } catch (error) {
+        console.error('Error in detectScreenCapture:', error);
         return false;
     }
 }
@@ -312,6 +431,42 @@ ipcMain.handle('get-hotkeys', () => {
 
 ipcMain.handle('get-screen-sharing-status', () => {
     return screenSharingActive;
+});
+
+ipcMain.handle('toggle-screen-sharing-mode', () => {
+    toggleScreenSharingMode();
+    return screenSharingActive;
+});
+
+ipcMain.handle('set-screen-sharing-mode', (event, active) => {
+    screenSharingActive = active;
+    console.log(`Screen sharing mode set to: ${active}`);
+    
+    if (active) {
+        enableContentProtection();
+    } else {
+        disableContentProtection();
+    }
+    
+    // Send notification to renderer
+    if (mainWindow) {
+        mainWindow.webContents.send('screen-sharing-status', active);
+    }
+    
+    return screenSharingActive;
+});
+
+ipcMain.handle('get-content-protection-status', () => {
+    return contentProtectionEnabled;
+});
+
+ipcMain.handle('toggle-content-protection', () => {
+    if (contentProtectionEnabled) {
+        disableContentProtection();
+    } else {
+        enableContentProtection();
+    }
+    return contentProtectionEnabled;
 });
 
 app.on('ready', () => {

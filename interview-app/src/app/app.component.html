@@ -145,8 +145,37 @@
         <div class="setting-item">
           <label>Screen Sharing Status:</label>
           <span class="status-indicator" [class.active]="screenSharingActive">
-            {{screenSharingActive ? 'ACTIVE (Hidden)' : 'INACTIVE'}}
+            {{screenSharingActive ? 'PROTECTED (Not visible in screen share)' : 'VISIBLE (Will appear in screen share)'}}
           </span>
+        </div>
+        
+        <div class="setting-item">
+          <label>Content Protection:</label>
+          <span class="status-indicator" [class.active]="contentProtectionEnabled">
+            {{contentProtectionEnabled ? 'ENABLED' : 'DISABLED'}}
+          </span>
+        </div>
+        
+        <div class="setting-item">
+          <label>Screen Capture Protection:</label>
+          <div class="screen-sharing-controls">
+            <button 
+              class="control-btn"
+              [class.active]="contentProtectionEnabled"
+              (click)="setScreenSharingMode(true)"
+              [disabled]="contentProtectionEnabled"
+              title="Hide from screen sharing (you can still see it)">
+              Enable Protection
+            </button>
+            <button 
+              class="control-btn"
+              [class.active]="!contentProtectionEnabled"
+              (click)="setScreenSharingMode(false)"
+              [disabled]="!contentProtectionEnabled"
+              title="Allow in screen sharing">
+              Disable Protection
+            </button>
+          </div>
         </div>
       </div>
       
@@ -183,6 +212,11 @@
           <span class="hotkey-action">Global Hide:</span>
           <kbd class="hotkey-combo">{{getHotkeyText('globalHide')}}</kbd>
         </div>
+        
+        <div class="hotkey-item">
+          <span class="hotkey-action">Screen Capture Protection:</span>
+          <kbd class="hotkey-combo">{{getHotkeyText('screenSharingToggle')}}</kbd>
+        </div>
       </div>
       
       <!-- Quick Actions -->
@@ -192,7 +226,7 @@
         <div class="action-buttons">
           <button class="action-btn" (click)="takeScreenshot()">📸 Take Screenshot</button>
           <button class="action-btn" (click)="resetPosition()">⌂ Reset Position</button>
-          <button class="action-btn" (click)="hideWindow()">🙈 Hide Window</button>
+          <button class="action-btn" (click)="toggleContentProtection()">🔒 Toggle Screen Protection</button>
         </div>
       </div>
     </div>

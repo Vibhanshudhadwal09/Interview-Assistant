@@ -18,9 +18,11 @@
     "@angular/forms": "^20.3.1",
     "@angular/platform-browser": "^20.0.0",
     "@angular/platform-browser-dynamic": "^20.0.0",
+    "active-win": "^8.2.1",
     "electron": "^13.0.0",
     "electron-localshortcut": "^3.2.1",
     "globalkey": "^1.0.7",
+    "node-window-manager": "^2.2.4",
     "zone.js": "^0.15.1"
   },
   "devDependencies": {
